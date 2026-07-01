@@ -192,6 +192,10 @@
             "Zimbabwe": [-19.0154, 29.1549]
         };
 
+        function offsetCoords(coords, offsetLat, offsetLng) {
+            return [coords[0] + offsetLat, coords[1] + offsetLng];
+        }
+
         async function fetchData() {
             try {
                 const response = await fetch(URL);
@@ -211,9 +215,9 @@
                     const lives = row.c[2]?.v;
                     const patients = row.c[3]?.v;
 
-                    // 🔵 Azul — onde nasceu
+                    // 🔵 Azul — onde nasceu (sem offset)
                     if (born && COUNTRY_COORDS[born]) {
-                        L.circleMarker(COUNTRY_COORDS[born], {
+                        L.circleMarker(offsetCoords(COUNTRY_COORDS[born], 0, 0), {
                             radius: 8,
                             color: '#4fc3f7',
                             fillColor: '#4fc3f7',
@@ -221,9 +225,9 @@
                         }).addTo(map).bindPopup(`🔵 Born: ${born}`);
                     }
 
-                    // 🟢 Verde — onde vive/trabalha
+                    // 🟢 Verde — onde vive/trabalha (offset leve para direita)
                     if (lives && COUNTRY_COORDS[lives]) {
-                        L.circleMarker(COUNTRY_COORDS[lives], {
+                        L.circleMarker(offsetCoords(COUNTRY_COORDS[lives], 0, 2), {
                             radius: 8,
                             color: '#81c784',
                             fillColor: '#81c784',
@@ -231,12 +235,12 @@
                         }).addTo(map).bindPopup(`🟢 Lives/Works: ${lives}`);
                     }
 
-                    // 🔴 Vermelho — pacientes (múltiplos países)
+                    // 🔴 Vermelho — pacientes (offset para baixo)
                     if (patients) {
                         patients.split(',').forEach(p => {
                             const country = p.trim();
                             if (COUNTRY_COORDS[country]) {
-                                L.circleMarker(COUNTRY_COORDS[country], {
+                                L.circleMarker(offsetCoords(COUNTRY_COORDS[country], -2, 1), {
                                     radius: 8,
                                     color: '#e57373',
                                     fillColor: '#e57373',
