@@ -29,9 +29,10 @@
             width: 100vw;
             height: calc(100vh - 70px);
         }
+
         #legend {
             position: absolute;
-            bottom: 30px;
+            bottom: 80px;
             right: 10px;
             z-index: 1000;
             background: rgba(0, 0, 0, 0.7);
@@ -66,16 +67,15 @@
 
     <h1>🎵 Music Therapy Congress 2026</h1>
     <div id="map"></div>
-
     <div id="counter">👥 Participants: 0</div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <div id="legend">
-    <div><span class="legend-dot" style="background:#4fc3f7"></span>Where I was born</div>
-    <div><span class="legend-dot" style="background:#81c784"></span>Where I live/work</div>
-    <div><span class="legend-dot" style="background:#e57373"></span>Where my patients come from</div>
+        <div><span class="legend-dot" style="background:#4fc3f7"></span>Where I was born</div>
+        <div><span class="legend-dot" style="background:#81c784"></span>Where I live/work</div>
+        <div><span class="legend-dot" style="background:#e57373"></span>Where my patients come from</div>
     </div>
 
     <script>
@@ -84,6 +84,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+
         const SHEET_ID = '1XozqihkO2b_jGqY6K1jcXzukO_NZq40kuTfGqhrOxRs';
         const GID = '1282753161';
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
@@ -192,6 +193,23 @@
             "Zimbabwe": [-19.0154, 29.1549]
         };
 
+        function countCountries(rows, colIndex) {
+            const counts = {};
+            rows.forEach(row => {
+                const value = row.c[colIndex]?.v;
+                if (!value) return;
+                value.split(',').forEach(c => {
+                    const country = c.trim();
+                    counts[country] = (counts[country] || 0) + 1;
+                });
+            });
+            return counts;
+        }
+
+        function getRadius(count) {
+            return Math.min(6 + count * 4, 30);
+        }
+
         function offsetCoords(coords, offsetLat, offsetLng) {
             return [coords[0] + offsetLat, coords[1] + offsetLng];
         }
@@ -205,6 +223,10 @@
 
                 document.getElementById('counter').textContent = `👥 Participants: ${rows.length}`;
 
+                const bornCounts = countCountries(rows, 1);
+                const livesCounts = countCountries(rows, 2);
+                const patientsCounts = countCountries(rows, 3);
+
                 // Limpa os marcadores anteriores antes de redesenhar
                 map.eachLayer(layer => {
                     if (layer instanceof L.CircleMarker) map.removeLayer(layer);
@@ -215,50 +237,52 @@
                     const lives = row.c[2]?.v;
                     const patients = row.c[3]?.v;
 
-                    // 🔵 Azul — onde nasceu (sem offset)
+                    // 🔵 Azul — onde nasceu
                     if (born && COUNTRY_COORDS[born]) {
                         L.circleMarker(offsetCoords(COUNTRY_COORDS[born], 0, 0), {
-                            radius: 8,
+                            radius: getRadius(bornCounts[born] || 1),
                             color: '#4fc3f7',
+                            weight: 2,
                             fillColor: '#4fc3f7',
-                            fillOpacity: 0.8
-                        }).addTo(map).bindPopup(`🔵 Born: ${born}`);
+                            fillOpacity: 0.35
+                        }).addTo(map).bindPopup(`🔵 Born: ${born} (${bornCounts[born]})`);
                     }
 
-                    // 🟢 Verde — onde vive/trabalha (offset leve para direita)
+                    // 🟢 Verde — onde vive/trabalha
                     if (lives && COUNTRY_COORDS[lives]) {
                         L.circleMarker(offsetCoords(COUNTRY_COORDS[lives], 0, 2), {
-                            radius: 8,
+                            radius: getRadius(livesCounts[lives] || 1),
                             color: '#81c784',
+                            weight: 2,
                             fillColor: '#81c784',
-                            fillOpacity: 0.8
-                        }).addTo(map).bindPopup(`🟢 Lives/Works: ${lives}`);
+                            fillOpacity: 0.35
+                        }).addTo(map).bindPopup(`🟢 Lives/Works: ${lives} (${livesCounts[lives]})`);
                     }
 
-                    // 🔴 Vermelho — pacientes (offset para baixo)
+                    // 🔴 Vermelho — pacientes
                     if (patients) {
                         patients.split(',').forEach(p => {
                             const country = p.trim();
                             if (COUNTRY_COORDS[country]) {
                                 L.circleMarker(offsetCoords(COUNTRY_COORDS[country], -2, 1), {
-                                    radius: 8,
+                                    radius: getRadius(patientsCounts[country] || 1),
                                     color: '#e57373',
+                                    weight: 2,
                                     fillColor: '#e57373',
-                                    fillOpacity: 0.8
-                                }).addTo(map).bindPopup(`🔴 Patient from: ${country}`);
+                                    fillOpacity: 0.35
+                                }).addTo(map).bindPopup(`🔴 Patient from: ${country} (${patientsCounts[country]})`);
                             }
                         });
                     }
                 });
 
-            console.log('Mapa atualizado:', new Date().toLocaleTimeString());
+                console.log('Mapa atualizado:', new Date().toLocaleTimeString());
 
             } catch (error) {
                 console.error('Erro ao buscar dados:', error);
             }
         }
 
-        // Busca imediata + atualização a cada 30 segundos
         fetchData();
         setInterval(fetchData, 10000);
     </script>
